@@ -11,6 +11,7 @@ def load_image(path):
 
 ################################################################
 
+
 def display_image(img):
     """ Show an image with matplotlib
 
@@ -38,7 +39,7 @@ def load_npy(path):
     Returns:
         Image as numpy array (H,W,3)
     """
-    return np.load(path)
+    return np.load(path)  # H, W, 3 = (1024, 1024, 3)
 
 
 def mirror_horizontal(img):
