@@ -10,9 +10,7 @@ def loadbayer(path):
     Returns:
         Data as numpy array (H,W)
     """
-    #
-    # You code here
-    #
+    return np.load(path)
 
 
 def separatechannels(bayerdata):
@@ -26,9 +24,23 @@ def separatechannels(bayerdata):
     Returns:
         red, green, and blue channel as numpy array (H,W)
     """
-    #
-    # You code here
-    #
+
+    print(bayerdata.shape)  # debug
+    # H,W = (1024, 1024)
+    # initialization
+    r = bayerdata.copy()  # deep copy, in order to keep original bayerdata clean (no change)
+    g = bayerdata.copy()
+    b = bayerdata.copy()
+
+    # missing color = 0, turn pixels no need 0
+    r[0::2, 0::2] = 0  # slicing: start from element in 1st row and 1st col, every other row, column, set to zero
+    r[1::2] = 0  # slicing: start from 2nd row, every other row, set to zero
+    g[0::2, 1::2] = 0
+    g[1::2, 0::2] = 0
+    b[1::2, 1::2] = 0
+    b[0::2] = 0
+    return np.array(r), np.array(g), np.array(b)
+
 
 
 def assembleimage(r, g, b):
@@ -41,9 +53,14 @@ def assembleimage(r, g, b):
     Returns:
         Image as numpy array (H,W,3)
     """
-    #
-    # You code here
-    #
+    h, w = r.shape
+    img = np.zeros(shape=(h, w, 3))
+    if r.size == g.size == b.size:  # check shape consistent
+        img = np.stack([r, g, b], axis=2)
+        print(img.shape)  # debug
+    else:
+        print('r,g,b not same shape.')
+    return img
 
 
 def interpolate(r, g, b):
@@ -57,6 +74,20 @@ def interpolate(r, g, b):
     Returns:
         Interpolated image as numpy array (H,W,3)
     """
-    #
-    # You code here
-    #
+    # initialization
+    kernel_1 = np.array([[0.25, 0.5, 0.25], [0.5, 1, 0.5], [0.25, 0.5, 0.25]])  # kernel_1 for r and b channel
+    kernel_2 = np.array([[0, 0.25, 0], [0.25, 1, 0.25], [0, 0.25, 0]])  # kernel_2 for g channel
+
+    # convolve with nearest mode
+    new_r = convolve(r, kernel_1, mode='mirror')
+    new_g = convolve(g, kernel_2, mode='mirror')
+    new_b = convolve(b, kernel_1, mode='mirror')
+    h, w = new_r.shape
+
+    # output
+    img = np.zeros(shape=(h, w, 3))
+    if new_r.size == new_g.size == new_b.size:
+        img = np.stack([new_r, new_g, new_b], axis=2)
+    else:
+        print('not same shape.')
+    return img
