@@ -17,9 +17,8 @@ def display_image(img):
     Args:
         img: Image as numpy array (H,W,3)
     """
-    #
-    # You code here
-    #
+    plt.imshow(img)
+    return plt.show()
 
 
 def save_as_npy(path, img):
@@ -28,9 +27,7 @@ def save_as_npy(path, img):
     Args:
         img: Image as numpy array (H,W,3)
     """
-    #
-    # You code here
-    #
+    return np.save(path, img)
 
 
 def load_npy(path):
@@ -41,9 +38,7 @@ def load_npy(path):
     Returns:
         Image as numpy array (H,W,3)
     """
-    #
-    # You code here
-    #
+    return np.load(path)
 
 
 def mirror_horizontal(img):
@@ -55,9 +50,8 @@ def mirror_horizontal(img):
     Returns:
         A horizontally mirrored numpy array (H,W,3).
     """
-    #
-    # You code here
-    #
+    img_h = np.fliplr(img)
+    return img_h
 
 
 def display_images(img1, img2):
@@ -67,6 +61,9 @@ def display_images(img1, img2):
         img1: First image to display
         img2: Second image to display
     """
-    #
-    # You code here
-    #
+    fig, (ax1, ax2) = plt.subplots(1, 2)  # 1 row, 2 cols
+    ax1.imshow(img1)
+    ax1.set_title('Original')
+    ax2.imshow(img2)
+    ax2.set_title('Mirrored')
+    return plt.show()
