@@ -36,9 +36,9 @@ def gettranslation(v):
     Returns:
         Translation matrix in homogeneous coordinates
     """
-    #
-    # You code here
-    #
+    Tr = np.eye(4)
+    Tr[0:3, -1] = v
+    return Tr
 
 
 def getyrotation(d):
@@ -51,9 +51,11 @@ def getyrotation(d):
     Returns:
         Rotation matrix
     """
-    #
-    # You code here
-    #
+    Ry = np.eye(4)
+    Ry[0:3, 0:3] = np.array([[np.cos(d * np.pi / 180), 0, np.sin(d * np.pi / 180)],
+                   [0, 1, 0],
+                   [-np.sin(d * np.pi / 180), 0, np.cos(d * np.pi / 180)]])
+    return Ry
 
 
 def getxrotation(d):
@@ -66,10 +68,12 @@ def getxrotation(d):
     Returns:
         Rotation matrix
     """
-    #
-    # You code here
-    #
-    
+    Rx = np.eye(4)
+    Rx[0:3, 0:3] = np.array([[1, 0, 0],
+                   [0, np.cos(d * np.pi / 180), -np.sin(d * np.pi / 180)],
+                   [0, np.sin(d * np.pi / 180), np.cos(d * np.pi / 180)]])
+    return Rx
+
 
 def getzrotation(d):
     """ Returns rotation matrix Rz in homogeneous coordinates for a 
@@ -81,9 +85,11 @@ def getzrotation(d):
     Returns:
         Rotation matrix
     """
-    #
-    # You code here
-    #
+    Rz = np.eye(4)
+    Rz[0:3, 0:3] = np.array([[np.cos(d * np.pi / 180), -np.sin(d * np.pi / 180), 0],
+                   [np.sin(d * np.pi / 180), np.cos(d * np.pi / 180), 0],
+                   [0, 0, 1]])
+    return Rz
 
 
 def getcentralprojection(principal, focal):
@@ -98,9 +104,10 @@ def getcentralprojection(principal, focal):
     Returns:
         Central projection matrix
     """
-    #
-    # You code here
-    #
+    L = np.array([[focal, 0, principal[0], 0],
+                  [0, focal, principal[1], 0],
+                  [0, 0, 1, 0]])
+    return L
     
 
 def getfullprojection(T, Rx, Ry, Rz, L):
@@ -118,9 +125,11 @@ def getfullprojection(T, Rx, Ry, Rz, L):
         P: projection matrix
         M: matrix that summarizes extrinsic transformations
     """
-    #
-    # You code here
-    #
+    # R = Ry @ Rx @ Rz  # rotation matrix (4x4)
+    R = Rz @ Rx @ Ry
+    M = T @ R
+    P = L @ M
+    return P, M
 
 
 def cart2hom(points):
@@ -132,9 +141,7 @@ def cart2hom(points):
     Returns:
         A np array of points in homogeneous coordinates
     """
-    #
-    # You code here
-    #
+    return np.vstack((points, np.ones((1, points.shape[1]))))
 
 
 def hom2cart(points):
@@ -146,9 +153,13 @@ def hom2cart(points):
     Returns:
         A np array of points in cartesian coordinates
     """
-    #
-    # You code here
-    #
+    b = points / points[-1, :]
+    if (b[-1] == np.ones(b[-1].shape)).all():
+        return b[:-1, :]
+    else:
+        print("ERROR")
+
+
 
 
 def loadpoints(path):
@@ -159,9 +170,7 @@ def loadpoints(path):
     Returns:
         Data as numpy array
     """
-    #
-    # You code here
-    #
+    return np.load("data/obj2d.npy")
 
 
 def loadz(path):
@@ -172,9 +181,7 @@ def loadz(path):
     Returns:
         Data as numpy array
     """
-    #
-    # You code here
-    #
+    return np.load("data/zs.npy")
 
 
 def invertprojection(L, P2d, z):
@@ -190,9 +197,13 @@ def invertprojection(L, P2d, z):
     Returns:
         3d cartesian camera coordinates of the points
     """
-    #
-    # You code here
-    #
+    K = L[:, :-1]
+    inv_K = np.linalg.inv(K)
+
+    for i in range(z.size):
+        P2d[:, i] = P2d[:, i] * z[i]
+    P3d = inv_K @ (np.vstack((P2d, z)))  # homogene P2d
+    return P3d  # 3*1
 
 
 def inverttransformation(M, P3d):
@@ -206,10 +217,8 @@ def inverttransformation(M, P3d):
     Returns:
         3d points after the extrinsic transformations have been reverted
     """
-    #
-    # You code here
-    #
-
+    invM = np.linalg.inv(M)
+    return invM @ cart2hom(P3d)
 
 def projectpoints(P, X):
     """ Apply full projection matrix P to 3D points X in cartesian coordinates.
@@ -221,9 +230,8 @@ def projectpoints(P, X):
     Returns:
         x: 2d points in cartesian coordinates
     """
-    #
-    # You code here
-    #
+    X2dh = P @ cart2hom(X)
+    return hom2cart(X2dh)
 
 
 def p3multiplechoice(): 
@@ -236,4 +244,4 @@ def p3multiplechoice():
     2: All transformations commute.
     '''
 
-    return -1
+    return 0 # if they are transform in different
