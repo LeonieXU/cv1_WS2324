@@ -52,9 +52,13 @@ def getyrotation(d):
         Rotation matrix
     """
     Ry = np.eye(4)
-    Ry[0:3, 0:3] = np.array([[np.cos(d * np.pi / 180), 0, np.sin(d * np.pi / 180)],
-                   [0, 1, 0],
-                   [-np.sin(d * np.pi / 180), 0, np.cos(d * np.pi / 180)]])
+    d_rad = np.deg2rad(d)
+    Ry[0:3, 0:3] = np.array([[np.cos(d_rad), 0, np.sin(d_rad)],
+                             [0, 1, 0],
+                             [-np.sin(d_rad), 0, np.cos(d_rad)]])
+    # Ry[0:3, 0:3] = np.array([[np.cos(d * np.pi / 180), 0, np.sin(d * np.pi / 180)],
+    #                [0, 1, 0],
+    #                [-np.sin(d * np.pi / 180), 0, np.cos(d * np.pi / 180)]])
     return Ry
 
 
@@ -69,9 +73,10 @@ def getxrotation(d):
         Rotation matrix
     """
     Rx = np.eye(4)
+    d_rad = np.deg2rad(d)
     Rx[0:3, 0:3] = np.array([[1, 0, 0],
-                   [0, np.cos(d * np.pi / 180), -np.sin(d * np.pi / 180)],
-                   [0, np.sin(d * np.pi / 180), np.cos(d * np.pi / 180)]])
+                   [0, np.cos(d_rad), -np.sin(d_rad)],
+                   [0, np.sin(d_rad), np.cos(d_rad)]])
     return Rx
 
 
@@ -86,8 +91,9 @@ def getzrotation(d):
         Rotation matrix
     """
     Rz = np.eye(4)
-    Rz[0:3, 0:3] = np.array([[np.cos(d * np.pi / 180), -np.sin(d * np.pi / 180), 0],
-                   [np.sin(d * np.pi / 180), np.cos(d * np.pi / 180), 0],
+    d_rad = np.deg2rad(d)
+    Rz[0:3, 0:3] = np.array([[np.cos(d_rad), -np.sin(d_rad), 0],
+                   [np.sin(d_rad), np.cos(d_rad), 0],
                    [0, 0, 1]])
     return Rz
 
@@ -125,9 +131,10 @@ def getfullprojection(T, Rx, Ry, Rz, L):
         P: projection matrix
         M: matrix that summarizes extrinsic transformations
     """
-    # R = Ry @ Rx @ Rz  # rotation matrix (4x4)
-    R = Rz @ Rx @ Ry
+    # R = Ry @ Rx @ Rz
+    R = Rz @ Rx @ Ry  # rotation matrix (4x4)
     M = T @ R
+    # M = R @ T
     P = L @ M
     return P, M
 
@@ -203,7 +210,7 @@ def invertprojection(L, P2d, z):
     for i in range(z.size):
         P2d[:, i] = P2d[:, i] * z[i]
     P3d = inv_K @ (np.vstack((P2d, z)))  # homogene P2d
-    return P3d  # 3*1
+    return P3d  # 3*n
 
 
 def inverttransformation(M, P3d):
@@ -244,4 +251,4 @@ def p3multiplechoice():
     2: All transformations commute.
     '''
 
-    return 0 # if they are transform in different
+    return 0  #
