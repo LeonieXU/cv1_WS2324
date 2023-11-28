@@ -41,7 +41,7 @@ def sobel_edge(img):
     return Ix, Iy, Ig
 
 
-def detect_edges(grad_map, threshold=10):
+def detect_edges(grad_map, threshold=7):
     """ Applies threshold on the edge map to detect edges.
 
     Args:
@@ -56,17 +56,22 @@ def detect_edges(grad_map, threshold=10):
     edge_map[edge_map < threshold] = 0
 
     # grad_map with noise
-    print(grad_map.min(), grad_map.max())  # (0.0, 15.90990257669732)
+    # print(grad_map.min(), grad_map.max())  # (0.0, 15.90990257669732)
 
     # In addition to the code, please include your response as a comment to 
     # the following questions: Which threshold recovers the edge map of the 
     # original image when working with the noisy image? How did you 
     # determine this threshold value, and why did you choose it?
-    # Threshold = 10
-    # How?
-    # by print (grad_map.min(), grad_map.max()) = (0.0, 15.90990257669732),
-    # we got the pixel range of the gradient map from original image
-    # Why?...
+
+    # ANSWER #
+    # Threshold = 8
+    # by print one sample (grad_map_noisy.min, grad_map_noisy.max) = (0.016308414012899137, 21.15077545375202) from image with noise,
+    # we got an approximate pixel range of the gradient map from image with noise.
+    # Therefore, the threshold ought to be in it.
+    # Try Threshold<=7>: still has clear noise
+    # Try Threshold>=11: unclear edges, not enough precise to detect the edges
+    # with threshold in range(8,11), they all have good performance. But finally we got best result with threshold=8
+
     return edge_map
 
 def add_noise(img, mean=0, variance=15):
