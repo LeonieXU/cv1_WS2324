@@ -14,7 +14,6 @@ def load_img(path):
         image as (H, W) np.array normalized to [0, 1]
     """
     img = Image.open(path)
-    print(type(img))
     img = np.array(img)
     return (img - np.min(img)) / (np.max(img) - np.min(img))  # Normalization
 
@@ -162,7 +161,7 @@ def create_composite_image(pyramid):
     return cop_img
 
 
-def amplify_high_freq(lpyramid, l0_factor=1, l1_factor=1):
+def amplify_high_freq(lpyramid, l0_factor=1, l1_factor=5):
     """ Amplify frequencies of the finest two layers of the Laplacian pyramid
 
     Args:
@@ -188,8 +187,11 @@ def reconstruct_image(lpyramid, f):
         Reconstructed image as (H, W) np.array clipped to [0, 1]
     """
     n = len(lpyramid) - 1
-    rec_lpyramid = deepcopy(lpyramid[n])
-    for i in range(n - 1, -1, -1):
-        rec_lpyramid = lpyramid[i] + upsample2(rec_lpyramid, f)  # G[i]=L[i]+exbandG[i+1]
+    rec_lpyramid = deepcopy(lpyramid[n])  # copy last level of laplace-pyramid
+
+    for i in range(n-1, -1, -1):
+        print(i)
+        rec_lpyramid = lpyramid[i] + upsample2(rec_lpyramid, f)  # G[i] = L[i] + exbandG[i+1]
+
     rec_lpyramid = np.clip(rec_lpyramid, 0, 1)  # clipped to [0, 1]
     return rec_lpyramid
