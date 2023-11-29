@@ -41,7 +41,7 @@ def sobel_edge(img):
     return Ix, Iy, Ig
 
 
-def detect_edges(grad_map, threshold=9):
+def detect_edges(grad_map, threshold=10):
     """ Applies threshold on the edge map to detect edges.
 
     Args:
@@ -56,8 +56,6 @@ def detect_edges(grad_map, threshold=9):
 
     # noise reduction
     edge_map[edge_map < threshold] = 0
-
-    # print(grad_map.min(), grad_map.max())  # (0.0, 15.90990257669732)  # grad_map with noise
 
     # In addition to the code, please include your response as a comment to 
     # the following questions: Which threshold recovers the edge map of the 
