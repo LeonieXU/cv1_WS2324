@@ -53,10 +53,11 @@ def detect_edges(grad_map, threshold=9):
     # alternative with no deep copy
     term = grad_map
     edge_map = term.copy()
+
+    # noise reduction
     edge_map[edge_map < threshold] = 0
 
-    # grad_map with noise
-    # print(grad_map.min(), grad_map.max())  # (0.0, 15.90990257669732)
+    # print(grad_map.min(), grad_map.max())  # (0.0, 15.90990257669732)  # grad_map with noise
 
     # In addition to the code, please include your response as a comment to 
     # the following questions: Which threshold recovers the edge map of the 
@@ -65,14 +66,15 @@ def detect_edges(grad_map, threshold=9):
 
     # ANSWER #
     # Threshold = 9
-    # by print one sample (grad_map_noisy.min, grad_map_noisy.max) = (0.016308414012899137, 21.15077545375202) from image with noise,
-    # we got an approximate pixel range of the gradient map from image with noise.
+    # by print one sample (grad_map_noisy.min, grad_map_noisy.max) = (0.016308414012899137, 21.15077545375202)
+    # from image with noise, we got an approximate pixel range of the gradient map from image with noise.
     # Therefore, the threshold ought to be in it.
     # Try Threshold <= 8: still has clear noise
     # Try Threshold >= 11: unclear edges, not enough precise to detect the edges
     # with threshold in range(9,11), they all have good performance. But finally we got best result with threshold=9
 
     return edge_map
+
 
 def add_noise(img, mean=0, variance=15):
     """ Applies Gaussian noise on the image.
