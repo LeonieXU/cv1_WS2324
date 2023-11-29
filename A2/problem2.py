@@ -13,9 +13,12 @@ def load_img(path):
     Returns:
         image as (H, W) np.array normalized to [0, 1]
     """
-    img = Image.open(path)
-    img = np.array(img)
-    return (img - np.min(img)) / (np.max(img) - np.min(img))  # Normalization
+    #
+    # You code here
+    #
+    image = Image.open(path).convert('L')  # Convert image to grayscale
+    image_array = np.array(image).astype(np.float32) / 255.0  # Normalize to [0, 1]
+    return image_array
 
 
 def gauss_2d(sigma, fsize):
@@ -27,21 +30,15 @@ def gauss_2d(sigma, fsize):
     Returns:
         *normalized* Gaussian filter as (H, W) np.array
     """
-    # Initialization
-    x_size = fsize[0] // 2
-    y_size = fsize[1] // 2
-
-    # build gaussian filter: f(x,y)=(1/(sigma **2)*2 *pi)exp(-(x**2+y**2)/(2*(sigma**2)))
-    x = np.arange(-y_size, y_size + 1, dtype=float)
-    y = np.arange(-x_size, x_size + 1, dtype=float)
-    xv, yv = np.meshgrid(x, y)
-    gf = np.exp(-(xv ** 2 + yv ** 2) / (2 * (sigma ** 2)))
-    gf /= (sigma ** 2) * 2 * np.pi
-
-    # Normalization
-    gf /= gf.sum()
-
-    return gf
+    #
+    # You code here
+    #
+    fsize = np.array(fsize)
+    fsize += (1 - fsize % 2)
+    i, j = [(ss - 1.) / 2. for ss in fsize]
+    y, x = np.ogrid[-i:i + 1, -j:j + 1]
+    gaussian = np.exp(-(x * x + y * y) / (2. * sigma * sigma))
+    return gaussian / gaussian.sum()  # Normalize
 
 
 def binomial_2d(fsize):
@@ -52,15 +49,14 @@ def binomial_2d(fsize):
     Returns:
         *normalized* binomial filter as (H, W) np.array
     """
-    # pascal triangle
-    pt = np.array([binom(fsize[1] - 1, np.arange(fsize[1]))])
+    #
+    # You code here
+    #
+    size = fsize[0]
+    pascal_row = np.array([binom(size - 1, i) for i in range(size)])
+    binomial_filter = np.outer(pascal_row, pascal_row)
+    return binomial_filter / binomial_filter.sum()  # Normalize
 
-    # build binomial filter
-    bf = (pt.T) @ pt
-
-    # Normalization
-    bf /= bf.sum()
-    return bf
 
 
 def downsample2(img, f):
@@ -73,9 +69,12 @@ def downsample2(img, f):
     Returns:
         downsampled image as (H, W) np.array
     """
-    down_img = deepcopy(img)
-    down_img = convolve(down_img, f, mode='mirror')
-    return down_img[::2, ::2]
+    #
+    # You code here
+    #
+    smoothed_image = convolve(img, f, mode='mirror')
+    return smoothed_image[::2, ::2]
+
 
 
 def upsample2(img, f):
@@ -87,13 +86,14 @@ def upsample2(img, f):
     Returns:
         upsampled image as (H, W) np.array
     """
-    h, w = img.shape
-    up_img = np.zeros((2 * h, 2 * w))
+    #
+    # You code here
+    #
+    upsampled = np.zeros((img.shape[0] * 2, img.shape[1] * 2))
+    upsampled[::2, ::2] = img
+    filtered = convolve(upsampled, f, mode='mirror') * 4
+    return filtered
 
-    up_img[::2, ::2] = deepcopy(img)
-
-    up_img = convolve(up_img, f, mode='mirror')
-    return up_img * 4
 
 
 def gaussian_pyramid(img, nlevel, f):
@@ -107,13 +107,16 @@ def gaussian_pyramid(img, nlevel, f):
         Gaussian pyramid, pyramid levels as (H, W) np.array
         in a list sorted from fine to coarse
     """
-    img_list = []
-
-    for i in range(nlevel):
-        img_list += [img]
+    #
+    # You code here
+    #
+    pyramid = [img]
+    for _ in range(1, nlevel):
         img = downsample2(img, f)
+        pyramid.append(img)
+    return pyramid
 
-    return img_list
+
 
 
 def laplacian_pyramid(gpyramid, f):
@@ -126,13 +129,16 @@ def laplacian_pyramid(gpyramid, f):
         Laplacian pyramid, pyramid levels as (H, W) np.array
         in a list sorted from fine to coarse
     """
-    lpyramid = deepcopy(gpyramid)
-
-    for i in range(len(lpyramid) - 1):
-        lpyramid[i] = gpyramid[i] - upsample2(gpyramid[i + 1], f)
-
+    #
+    # You code here
+    #
+    lpyramid = []
+    for i in range(len(gpyramid) - 1):
+        gu = upsample2(gpyramid[i + 1], f)
+        gu = gu[:gpyramid[i].shape[0], :gpyramid[i].shape[1]]
+        lpyramid.append(gpyramid[i] - gu)
+    lpyramid.append(gpyramid[-1])
     return lpyramid
-
 
 def create_composite_image(pyramid):
     """ Create composite image from image pyramid
@@ -145,20 +151,21 @@ def create_composite_image(pyramid):
     Returns:
         composite image as (H, W) np.array
     """
-    # init
-    length = len(pyramid)
-    j = 0
-    cpyramid = deepcopy(pyramid)
+    #
+    # You code here
+    #
+    max_height = max(image.shape[0] for image in pyramid)
+    total_width = sum(image.shape[1] for image in pyramid)
+    composite_image = np.zeros((max_height, total_width), dtype=np.float32)
 
-    # preparing Canvas for pyramid
-    cop_img = np.zeros((max(pyramid[i].shape[0] for i in range(length)), sum(pyramid[i].shape[1] for i in range(length))))
+    current_x = 0
+    for image in pyramid:
+        normalized_image = image / image.max()  # Normalize each level individually
+        composite_image[:image.shape[0], current_x:current_x + image.shape[1]] = normalized_image
+        current_x += image.shape[1]
 
-    # write in data
-    for i in cpyramid:
-        i = (i - np.min(i)) / (np.max(i) - np.min(i))  # normalize
-        cop_img[0:i.shape[0], j:(j + i.shape[1])] = deepcopy(i)
-        j += i.shape[1]
-    return cop_img
+    return composite_image
+
 
 
 def amplify_high_freq(lpyramid, l0_factor=1, l1_factor=5):
@@ -171,10 +178,13 @@ def amplify_high_freq(lpyramid, l0_factor=1, l1_factor=5):
     Returns:
         Amplified Laplacian pyramid, data format like input pyramid
     """
-    lpyramid_amp = deepcopy(lpyramid)
-    lpyramid_amp[0] = lpyramid_amp[0] * l0_factor
-    lpyramid_amp[1] = lpyramid_amp[1] * l1_factor
-    return lpyramid_amp
+    #
+    # You code here
+    #
+    amplified_pyramid = deepcopy(lpyramid)
+    amplified_pyramid[0] *= l0_factor
+    amplified_pyramid[1] *= l1_factor
+    return amplified_pyramid
 
 
 def reconstruct_image(lpyramid, f):
@@ -186,12 +196,14 @@ def reconstruct_image(lpyramid, f):
     Returns:
         Reconstructed image as (H, W) np.array clipped to [0, 1]
     """
-    n = len(lpyramid) - 1
-    rec_lpyramid = deepcopy(lpyramid[n])  # copy last level of laplace-pyramid
+    #
+    # You code here
+    #
+    reconstructed = lpyramid[-1]
+    for level in lpyramid[-2::-1]:
+        reconstructed = upsample2(reconstructed, f)
 
-    for i in range(n-1, -1, -1):
-        print(i)
-        rec_lpyramid = lpyramid[i] + upsample2(rec_lpyramid, f)  # G[i] = L[i] + exbandG[i+1]
-
-    rec_lpyramid = np.clip(rec_lpyramid, 0, 1)  # clipped to [0, 1]
-    return rec_lpyramid
+        reconstructed = reconstructed[:level.shape[0], :level.shape[1]]
+        reconstructed += level
+        print(reconstructed.shape)
+    return np.clip(reconstructed, 0, 1)
