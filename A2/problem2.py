@@ -131,18 +131,20 @@ def laplacian_pyramid(gpyramid, f):
         Laplacian pyramid, pyramid levels as (H, W) np.array
         in a list sorted from fine to coarse
     """
-    lpyramid = []
-    # print(len(gpyramid))
+    lpyramid = deepcopy(gpyramid)
+    print(gpyramid[-1].shape)
 
     for i in range(len(gpyramid) - 1):
-        lpyramid.append(gpyramid[i] - upsample2(gpyramid[i + 1], f))
+        lpyramid[i] -= upsample2(lpyramid[i + 1], f)
 
     """ Difference:
-        The top level of Gaussian pyramid is original Bild.
-        The Gaussian pyramid provides a representation of the same image 
-        at multiple scales, using simple lowpass filtering and decimation techniques.
-        The Laplacian pyramid provides a coarse representation of the image 
-        as well as a set of detail images (bandpass components) at different scales.
+        The Gaussian Pyramid is a blurred and downsampled version of the original image.
+        The coarsest level of it represents the lowest resolution (32x32) of the origin
+        
+        While the Laplacian Pyramid represents the details that were lost during the 
+        downsampling process in the Gaussian Pyramid.
+        The coarsest level of it emphasizes the details (64x64) that were lost between 
+        the last 2 level of Gaussian Pyramid. 
     """
     return lpyramid
 
@@ -174,7 +176,7 @@ def create_composite_image(pyramid):
     return cop_img
 
 
-def amplify_high_freq(lpyramid, l0_factor=1.3, l1_factor=1.6):
+def amplify_high_freq(lpyramid, l0_factor=1.3, l1_factor=3):
     """ Amplify frequencies of the finest two layers of the Laplacian pyramid
 
     Args:
@@ -200,10 +202,9 @@ def reconstruct_image(lpyramid, f):
         Reconstructed image as (H, W) np.array clipped to [0, 1]
     """
     n = len(lpyramid)-1
-    rec_lpyramid = deepcopy(lpyramid[-1])  # copy last level of laplace-pyramid
+    rec_lpyramid = deepcopy(lpyramid[-1])  # deepcopy last level of laplace-pyramid
 
     for i in range(n-1, -1, -1):
-        print(i)
         rec_lpyramid = lpyramid[i] + upsample2(rec_lpyramid, f)  # G[i] = L[i] + exband_Gaussian[i+1]
 
     rec_lpyramid = np.clip(rec_lpyramid, 0, 1)  # clipped to [0, 1]
