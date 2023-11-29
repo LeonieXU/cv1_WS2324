@@ -93,7 +93,7 @@ def upsample2(img, f):
     h, w = img.shape
     up_img = np.zeros((2 * h, 2 * w))  # double the length and width
 
-    #
+    # insert pixel every 2 lines and columns
     up_img[::2, ::2] = deepcopy(img)
 
     #  Filter the result with kernel
