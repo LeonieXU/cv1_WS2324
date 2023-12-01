@@ -15,8 +15,8 @@ def load_img(path):
     """
     img = Image.open(path)
     img = np.array(img)
-    return (img - np.min(img)) / (np.max(img) - np.min(img))  # Normalization
-
+    # return (img - np.min(img)) / (np.max(img) - np.min(img))  # Normalization
+    return img / 255.0  # Normalization
 
 def gauss_2d(sigma, fsize):
     """ Create a 2D Gaussian filter
@@ -27,11 +27,14 @@ def gauss_2d(sigma, fsize):
     Returns:
         *normalized* Gaussian filter as (H, W) np.array
     """
+    """
+    https://www.kaggle.com/code/dasmehdixtr/gaussian-filter-implementation-from-scratch
+    """
     # Initialization
     x_size = fsize[0] // 2
     y_size = fsize[1] // 2
 
-    # build gaussian filter: f(x,y)=(1/(sigma **2)*2 *pi)exp(-(x**2+y**2)/(2*(sigma**2)))
+    # generate gaussian filter: f(x,y)=(1/(sigma **2)*2 *pi)exp(-(x**2+y**2)/(2*(sigma**2)))
     x = np.arange(-y_size, y_size + 1, dtype=float)
     y = np.arange(-x_size, x_size + 1, dtype=float)
     xv, yv = np.meshgrid(x, y)
@@ -39,9 +42,7 @@ def gauss_2d(sigma, fsize):
     gf /= (sigma ** 2) * 2 * np.pi
 
     # Normalization
-    gf /= gf.sum()
-
-    return gf
+    return gf / np.sum(gf)
 
 
 def binomial_2d(fsize):
@@ -52,15 +53,14 @@ def binomial_2d(fsize):
     Returns:
         *normalized* binomial filter as (H, W) np.array
     """
-    # pascal triangle
+    # Pascal triangle
     pt = np.array([binom(fsize[1] - 1, np.arange(fsize[1]))])
 
-    # build binomial filter
-    bf = (pt.T) @ pt
+    # Build binomial filter
+    bf = pt.T @ pt
 
     # Normalization
-    bf /= bf.sum()
-    return bf
+    return bf / np.sum(bf)
 
 
 def downsample2(img, f):
@@ -74,8 +74,10 @@ def downsample2(img, f):
         downsampled image as (H, W) np.array
     """
     down_img = deepcopy(img)
+
+    #  Filter the result with kernel
     down_img = convolve(down_img, f, mode='mirror')
-    return down_img[::2, ::2]
+    return down_img[::2, ::2]  # Downsample by taking every second pixel
 
 
 def upsample2(img, f):
@@ -87,11 +89,14 @@ def upsample2(img, f):
     Returns:
         upsampled image as (H, W) np.array
     """
+    # Init
     h, w = img.shape
-    up_img = np.zeros((2 * h, 2 * w))
+    up_img = np.zeros((2 * h, 2 * w))  # double the length and width
 
+    # Insert pixel every second pixel
     up_img[::2, ::2] = deepcopy(img)
 
+    #  Filter the result with kernel
     up_img = convolve(up_img, f, mode='mirror')
     return up_img * 4
 
@@ -127,10 +132,20 @@ def laplacian_pyramid(gpyramid, f):
         in a list sorted from fine to coarse
     """
     lpyramid = deepcopy(gpyramid)
+    print(gpyramid[-1].shape)
 
-    for i in range(len(lpyramid) - 1):
-        lpyramid[i] = gpyramid[i] - upsample2(gpyramid[i + 1], f)
+    for i in range(len(gpyramid) - 1):
+        lpyramid[i] -= upsample2(lpyramid[i + 1], f)
 
+    """ Difference:
+        The Gaussian Pyramid is a blurred and downsampled version of the original image.
+        The coarsest level of it represents the lowest resolution (32x32) of the origin
+        
+        While the Laplacian Pyramid represents the details that were lost during the 
+        downsampling process in the Gaussian Pyramid.
+        The coarsest level of it emphasizes the details (64x64) that were lost between 
+        the last 2 level of Gaussian Pyramid. 
+    """
     return lpyramid
 
 
@@ -146,22 +161,22 @@ def create_composite_image(pyramid):
         composite image as (H, W) np.array
     """
     # init
-    length = len(pyramid)
+    n = len(pyramid)
     j = 0
     cpyramid = deepcopy(pyramid)
 
-    # preparing Canvas for pyramid
-    cop_img = np.zeros((max(pyramid[i].shape[0] for i in range(length)), sum(pyramid[i].shape[1] for i in range(length))))
+    # Preparing canvas: height = height of the finest level, width = sum width of all level
+    cop_img = np.zeros((max(pyramid[i].shape[0] for i in range(n)), sum(pyramid[i].shape[1] for i in range(n))))
 
-    # write in data
+    # Display the images in the pyramid
     for i in cpyramid:
-        i = (i - np.min(i)) / (np.max(i) - np.min(i))  # normalize
-        cop_img[0:i.shape[0], j:(j + i.shape[1])] = deepcopy(i)
+        i = (i - np.min(i)) / (np.max(i) - np.min(i))  # Normalize
+        cop_img[:i.shape[0], j:(j + i.shape[1])] = i
         j += i.shape[1]
     return cop_img
 
 
-def amplify_high_freq(lpyramid, l0_factor=1, l1_factor=5):
+def amplify_high_freq(lpyramid, l0_factor=1.3, l1_factor=3):
     """ Amplify frequencies of the finest two layers of the Laplacian pyramid
 
     Args:
@@ -186,12 +201,11 @@ def reconstruct_image(lpyramid, f):
     Returns:
         Reconstructed image as (H, W) np.array clipped to [0, 1]
     """
-    n = len(lpyramid) - 1
-    rec_lpyramid = deepcopy(lpyramid[n])  # copy last level of laplace-pyramid
+    n = len(lpyramid)-1
+    rec_lpyramid = deepcopy(lpyramid[-1])  # deepcopy last level of laplace-pyramid
 
     for i in range(n-1, -1, -1):
-        print(i)
-        rec_lpyramid = lpyramid[i] + upsample2(rec_lpyramid, f)  # G[i] = L[i] + exbandG[i+1]
+        rec_lpyramid = lpyramid[i] + upsample2(rec_lpyramid, f)  # G[i] = L[i] + exband_Gaussian[i+1]
 
     rec_lpyramid = np.clip(rec_lpyramid, 0, 1)  # clipped to [0, 1]
     return rec_lpyramid
