@@ -53,10 +53,10 @@ def binomial_2d(fsize):
     Returns:
         *normalized* binomial filter as (H, W) np.array
     """
-    # pascal triangle
+    # Pascal triangle
     pt = np.array([binom(fsize[1] - 1, np.arange(fsize[1]))])
 
-    # build binomial filter
+    # Build binomial filter
     bf = pt.T @ pt
 
     # Normalization
@@ -77,7 +77,7 @@ def downsample2(img, f):
 
     #  Filter the result with kernel
     down_img = convolve(down_img, f, mode='mirror')
-    return down_img[::2, ::2]
+    return down_img[::2, ::2]  # Downsample by taking every second pixel
 
 
 def upsample2(img, f):
@@ -93,7 +93,7 @@ def upsample2(img, f):
     h, w = img.shape
     up_img = np.zeros((2 * h, 2 * w))  # double the length and width
 
-    # insert pixel every 2 lines and columns
+    # Insert pixel every second pixel
     up_img[::2, ::2] = deepcopy(img)
 
     #  Filter the result with kernel
@@ -165,12 +165,12 @@ def create_composite_image(pyramid):
     j = 0
     cpyramid = deepcopy(pyramid)
 
-    # preparing Canvas for pyramid
+    # Preparing canvas: height = height of the finest level, width = sum width of all level
     cop_img = np.zeros((max(pyramid[i].shape[0] for i in range(n)), sum(pyramid[i].shape[1] for i in range(n))))
 
-    # write in data
+    # Display the images in the pyramid
     for i in cpyramid:
-        i = (i - np.min(i)) / (np.max(i) - np.min(i))  # normalize
+        i = (i - np.min(i)) / (np.max(i) - np.min(i))  # Normalize
         cop_img[:i.shape[0], j:(j + i.shape[1])] = i
         j += i.shape[1]
     return cop_img
