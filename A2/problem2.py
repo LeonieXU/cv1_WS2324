@@ -96,7 +96,7 @@ def upsample2(img, f):
     # Insert pixel every second pixel
     up_img[::2, ::2] = deepcopy(img)
 
-    #  Filter the result with kernel
+    # Filter the result with kernel
     up_img = convolve(up_img, f, mode='mirror')
     return up_img * 4
 
@@ -114,6 +114,7 @@ def gaussian_pyramid(img, nlevel, f):
     """
     img_list = []
 
+    # downsample and save downsampled image
     for i in range(nlevel):
         img_list += [img]
         img = downsample2(img, f)
