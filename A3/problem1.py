@@ -2,7 +2,9 @@ import numpy as np
 import os
 from PIL import Image
 
-
+"""
+source: https://www.kaggle.com/code/vishvaachhatrara/pca-on-face-images-from-scratch
+"""
 def load_faces(path, ext=".pgm"):
     """Load faces into an array (N, M),
     where N is the number of face images and M is the dimensionality 
@@ -19,8 +21,20 @@ def load_faces(path, ext=".pgm"):
         x: (N, M) array
         hw: (H, W) tuple
     """
+    x = []
 
-    # You code here
+    # load faces
+    for root, _, files in os.walk(path):
+        for file in files:
+            if file.endswith(ext):
+                x += [np.array(Image.open(os.path.join(root, file)))]
+
+    x = np.array(x)
+    n = x.shape[0]
+    hw = x.shape[1:]  # image dimension
+    x = x.reshape(n, -1)  # vectorize images
+
+    return x, hw
 
 
 def PCA_mcq():
@@ -39,7 +53,7 @@ def PCA_mcq():
     method is SVD because it is more computationally efficient for our problem, and
     allows to compute eigenvector and eigenvalues of any matrix.
     """
-    return
+    return tuple([0, 2, 4])
 
 
 def compute_pca(X):
@@ -52,9 +66,17 @@ def compute_pca(X):
         u: (M, M) bases with principal components
         var: (N,) corresponding variance
     """
-    #
-    # You code here
-    #
+    # center the data
+    mean_face = np.mean(X, axis=0)
+    X_hat = X - mean_face  # each row represents a variable
+
+    # find the singular values through SVD
+    u, s, vh = np.linalg.svd(X_hat)
+
+    # compute variance
+    var = s ** 2 / X.shape[0]
+    print(var.shape)
+    return vh.T, var
 
 
 def basis(u, var, p=0.5):
@@ -74,9 +96,16 @@ def basis(u, var, p=0.5):
         p (percentile) of the variance.
     
     """
-    #
-    # You code here
-    #
+    # compute target variance
+    total_var = np.sum(var)
+    p_var = p * total_var
+
+    # Find the minimum number of principal components that explain at least p percent of the variance
+    cumul_var = np.cumsum(var)
+    D = np.argmax(cumul_var >= p_var)
+
+    return u[:, :D]
+
 
 
 def reconstruct(face_image, mean_face, u):
@@ -91,9 +120,13 @@ def reconstruct(face_image, mean_face, u):
     Returns:
         reconstructed_img: (M, ) numpy array of reconstructed face image
     """
-    #
-    # You code here
-    #
+    # generating eigen faces: project the centered face image onto the principal components
+    eigen_faces = u.T @ (face_image - mean_face)
+
+    # reconstruct the face image using the principal components
+    reconstructed_img = mean_face + u @ eigen_faces
+
+    return reconstructed_img
 
 
 def components_mcq():
@@ -105,7 +138,7 @@ def components_mcq():
     3: The more principal components we use, the sharper is the image
     4: The variations in the last principal components is perceptually insignificant; these bases can be neglected in the projection
     """
-    return
+    return 1
 
 
 def search(Y, x, u, mean_face, top_n):
@@ -122,9 +155,18 @@ def search(Y, x, u, mean_face, top_n):
     Returns:
         Y: (top_n, M)
     """
-    #
-    # You code here
-    #
+    # project the input image and entire dataset onto the selected principal components
+    x_eigenfaces = u.T @ (x - mean_face)  # (D, )
+    Y_eigenfaces = (Y - mean_face) @ u  # (N, D)
+    print("Y_eigenfaces:", Y_eigenfaces.shape)
+
+    # calculate the L2 distance between the input image and all images in the dataset
+    dist = np.linalg.norm(Y_eigenfaces - x_eigenfaces, axis=1)  # (N, )
+
+    # the top_n closest images
+    top_n_faces = np.argsort(dist)[:top_n]
+
+    return Y[top_n_faces, :]
 
 
 def interpolate(x1, x2, u, mean_face, n):
@@ -144,6 +186,8 @@ def interpolate(x1, x2, u, mean_face, n):
         The first dimension is in the index into corresponding
         image; Y[0] == reconstruct(x1, mean_face, u); Y[-1] == reconstruct(x2, mean_face, u)
     """
-    #
-    # You code here
-    #
+    x_inpo = np.linspace(x1, x2, n)
+    Y = [reconstruct(x, mean_face, u) for x in x_inpo]
+
+    return np.array(Y)
+
