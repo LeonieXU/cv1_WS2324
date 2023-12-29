@@ -53,7 +53,7 @@ def PCA_mcq():
     method is SVD because it is more computationally efficient for our problem, and
     allows to compute eigenvector and eigenvalues of any matrix.
     """
-    return tuple([0, 2, 4])
+    return tuple([0, 2, 3])
 
 
 def compute_pca(X):

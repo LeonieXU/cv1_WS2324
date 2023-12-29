@@ -1,6 +1,10 @@
 import numpy as np
 from scipy.ndimage import convolve, maximum_filter
 
+'''
+    Citations:
+    Harris Corner and Edge Detector(Isaac Berrios): https://medium.com/@itberrios6/harris-corner-and-edge-detector-4169312aa2f8
+'''
 
 def derivative_filters():
     """ Create derivative filters for x and y direction
@@ -9,8 +13,13 @@ def derivative_filters():
         fx: derivative filter in x direction
         fy: derivative filter in y direction
     """
-    fx = np.array([[0.5, 0, -0.5]])
-    fy = fx.transpose()
+    # sobel kernels
+    fx = np.array([
+        [1, 0, -1],
+        [2, 0, -2],
+        [1, 0, -1]])
+
+    fy = fx.T
     return fx, fy
 
 
@@ -27,8 +36,10 @@ def gauss_2d(sigma, fsize):
     x = np.arange(-m / 2 + 0.5, m / 2)
     y = np.arange(-n / 2 + 0.5, n / 2)
     xx, yy = np.meshgrid(x, y, sparse=True)
+
+    # Calculate the 2D Gaussian filter
     g = np.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
-    return g / np.sum(g)
+    return g / np.sum(g)  # normalization
 
 
 def compute_hessian(img, gauss, fx, fy):
@@ -45,9 +56,18 @@ def compute_hessian(img, gauss, fx, fy):
         I_yy: (h, w) np.array of 2nd derivatives in y direction
         I_xy: (h, w) np.array of 2nd derivatives in x-y direction
     """
-    #
-    # You code here
-    #
+    # Smooth the image with the Gaussian filter
+    smooth = convolve(img, gauss, mode='mirror')
+
+    # Compute the first derivatives
+    I_x = convolve(smooth, fx, mode='mirror')
+    I_y = convolve(smooth, fy, mode='mirror')
+
+    # Compute the second derivatives
+    I_xx = convolve(I_x, fx, mode='mirror')
+    I_yy = convolve(I_y, fy, mode='mirror')
+    I_xy = convolve(I_x, fy, mode='mirror')
+    return I_xx, I_yy, I_xy
 
 
 def compute_criterion(I_xx, I_yy, I_xy, sigma):
@@ -62,9 +82,8 @@ def compute_criterion(I_xx, I_yy, I_xy, sigma):
     Returns:
         criterion: (h, w) np.array of scaled determinant of Hessian matrix
     """
-    #
-    # You code here
-    #
+    criterion = sigma ** 4 * (I_xx * I_yy - I_xy ** 2)
+    return criterion
 
 
 def non_max_suppression(criterion, threshold):
@@ -78,6 +97,9 @@ def non_max_suppression(criterion, threshold):
             rows: (n,) np.array with y-positions of interest points
             cols: (n,) np.array with x-positions of interest points
     """
-    #
-    # You code here
-    #
+    # Apply non-maximum suppression using a 5x5 maximum filter
+    local_max = maximum_filter(criterion, size=5, mode='mirror')
+
+    # Find locations of interest points
+    rows, cols = np.nonzero((criterion == local_max) & (criterion > threshold))
+    return rows, cols
