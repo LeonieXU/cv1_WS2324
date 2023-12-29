@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from utils import *
                
 #
@@ -142,6 +144,7 @@ def problem3():
                                      data=H_inv.ravel(),
                                      resample=Image.BICUBIC)
 
+    plt.imshow(im3)
     plt.show()
 
 

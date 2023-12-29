@@ -14,19 +14,22 @@ def load_pts_features(path):
         feats: SIFT descriptors for two images;
                an array (2,) of numpy arrays (N1, 128), (N2, 128)
     """
+    # Load data
+    data = np.load(path, allow_pickle=True)
 
-    #
-    # Your code here
-    #
+    # Extract interest points and SIFT features
+    interest_points = data['pts']
+    features = data['feats']
 
-    pts = [np.empty((123, 2)), np.empty((123, 2))]
-    feats = [np.empty((123, 128)), np.empty((123, 128))]
+    # Separate coordinate points and SIFT descriptors for two images
+    pts = [interest_points[0], interest_points[1]]
+    feats = [features[0], features[1]]
 
     return pts, feats
 
 
 def min_num_pairs():
-    return np.random.randint(1, 32)
+    return 4
 
 
 def pickup_samples(pts1, pts2):
@@ -43,12 +46,17 @@ def pickup_samples(pts1, pts2):
         pts1_sub and pts2_sub: N_min randomly selected points 
                                from pts1 and pts2
     """
+    # Determine the minimum number of point pairs needed
+    N_min = min_num_pairs()
 
-    #
-    # Your code here
-    #
+    # Randomly select N_min corresponding point pairs
+    index = np.random.choice(len(pts1), size=N_min, replace=False)
 
-    return None, None
+    # Extract selected points from pts1 and pts2
+    pts1_sub = pts1[index]
+    pts2_sub = pts2[index]
+
+    return pts1_sub, pts2_sub
 
 
 def compute_homography(pts1, pts2):
@@ -61,12 +69,21 @@ def compute_homography(pts1, pts2):
     Returns:
         H: homography matrix as array (3, 3)
     """
+    assert len(pts1) == len(pts2)
 
-    #
-    # Your code here
-    #
+    # Construct the homogeneous linear equation system
+    A = []
+    for i in range(pts1.shape[0]):
+        A += [[0, 0, 0, pts1[i, 0], pts1[i, 1], 1, -pts1[i, 0] * pts2[i, 1], -pts1[i, 1] * pts2[i, 1], -pts2[i, 1]],
+              [-pts1[i, 0], -pts1[i, 1], -1, 0, 0, 0, pts1[i, 0] * pts2[i, 0], pts1[i, 1] * pts2[i, 0], pts2[i, 0]]]
 
-    return np.empty(3, 3)
+    A = np.array(A)
+
+    # Solve the homogeneous linear equation system using SVD
+    _, _, vh = np.linalg.svd(A)
+    H = vh[-1, :].reshape((3, 3))
+
+    return H
 
 
 def transform_pts(pts, H):
@@ -79,12 +96,16 @@ def transform_pts(pts, H):
     Returns:
         transformed points, array (N, 2)
     """
+    # Homogeneous coordinates (add a column of ones)
+    p = np.hstack((pts, np.ones((pts.shape[0], 1))))
 
-    #
-    # Your code here
-    #
+    # Transform the points
+    pointsT = H @ p.T
 
-    return np.empty(100, 2)
+    # Normalization
+    pointsT = pointsT / pointsT[-1]
+
+    return pointsT[:2, :].T
 
 
 def count_inliers(H, pts1, pts2, threshold=5):
@@ -99,8 +120,16 @@ def count_inliers(H, pts1, pts2, threshold=5):
     Returns:
         number of inliers
     """
+    # Transformation
+    pts1_H = transform_pts(pts1, H)
 
-    return np.empty(1)
+    # Calculate the L2 distance
+    dist = np.linalg.norm(pts1_H - pts2, axis=1)
+
+    # Count the number of inliers based on the threshold
+    n_inliers = len(dist[dist < threshold])
+
+    return n_inliers
 
 
 def ransac_iters(w=0.5, d=min_num_pairs(), z=0.99):
@@ -114,8 +143,9 @@ def ransac_iters(w=0.5, d=min_num_pairs(), z=0.99):
     Returns:
         minimum number of required iterations
     """
-
-    return np.empty(1)
+    nume = np.log(1 - z)  # numerator
+    deno = np.log(1 - w ** d)  # denominator
+    return int(nume / deno) + 1  # return the ceiling
 
 
 def ransac(pts1, pts2):
@@ -128,12 +158,21 @@ def ransac(pts1, pts2):
     Returns:
         best homography observed during RANSAC, array (3, 3)
     """
-
-    #
-    # Your code here
-    #
-
+    # init
     best_H = np.empty((3, 3))
+    max_inliers = 0
+    max_iters = ransac_iters()
+    assert max_iters <= len(pts1)
+
+    # RANSAC algorithm
+    for i in range(max_iters):
+        print("iters", i, " of ", max_iters)
+        s1, s2 = pickup_samples(pts1, pts2)  # random select 4 pairs
+        H = compute_homography(s1, s2)
+        n_inliers = count_inliers(H, pts1, pts2)
+        if n_inliers > max_inliers:
+            best_H = H
+            max_inliers = n_inliers
 
     return best_H
 
@@ -151,13 +190,23 @@ def find_matches(feats1, feats2, rT=0.8):
         idx1: list of indices of matching points in img1
         idx2: list of indices of matching points in img2
     """
-
     idx1 = []
     idx2 = []
 
-    #
-    # Your code here
-    #
+    for i, feat1 in enumerate(feats1):
+        # Calculate L2 distances between feat1 and all feats2
+        dist = np.linalg.norm(feat1 - feats2, axis=1)
+
+        # Find the indices of the two closest features
+        closest_indices = np.argsort(dist)[:2]
+
+        # Calculate the ratio of distances
+        ratio = dist[closest_indices[0]] / dist[closest_indices[1]]
+
+        # Check if the ratio is below the threshold
+        if ratio < rT:
+            idx1.append(i)
+            idx2.append(closest_indices[0])
 
     return idx1, idx2
 
@@ -177,11 +226,14 @@ def final_homography(pts1, pts2, feats1, feats2):
         idxs2: list of matched points in image 2
     """
 
-    #
-    # Your code here
-    #
+    # Find initial matches using SIFT descriptors
+    idxs1, idxs2 = find_matches(feats1, feats2)
 
-    idxs1, idxs2 = [], []
-    ransac_return = np.empty((3,3))
+    # Extract corresponding points from the initial matches
+    initial_pts1 = pts1[idxs1]
+    initial_pts2 = pts2[idxs2]
+
+    # Run RANSAC to get the best homography
+    ransac_return = ransac(initial_pts1, initial_pts2)
 
     return ransac_return, idxs1, idxs2
