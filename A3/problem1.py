@@ -5,6 +5,8 @@ from PIL import Image
 """
 source: https://www.kaggle.com/code/vishvaachhatrara/pca-on-face-images-from-scratch
 """
+
+
 def load_faces(path, ext=".pgm"):
     """Load faces into an array (N, M),
     where N is the number of face images and M is the dimensionality 
@@ -23,7 +25,7 @@ def load_faces(path, ext=".pgm"):
     """
     x = []
 
-    # load faces
+    # Load faces
     for root, _, files in os.walk(path):
         for file in files:
             if file.endswith(ext):

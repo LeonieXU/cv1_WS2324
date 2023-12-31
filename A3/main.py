@@ -114,8 +114,7 @@ def problem3():
     plt.plot(pts2[:, 0], pts2[:, 1], 'ro', markersize=1.3)
 
     # display algined image
-    H, ix1, ix2 = p3.final_homography(pts1, pts2, feats_array[0],
-                                      feats_array[1])
+    H, ix1, ix2 = p3.final_homography(pts1, pts2, fts1, fts2)
 
     pts1 = pts1[ix1]
     pts2 = pts2[ix2]
@@ -149,6 +148,6 @@ def problem3():
 
 
 if __name__ == "__main__":
-    problem1()
-    problem2()
+    # problem1()
+    # problem2()
     problem3()

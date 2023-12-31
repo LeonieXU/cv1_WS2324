@@ -2,9 +2,9 @@ import numpy as np
 from scipy.ndimage import convolve, maximum_filter
 
 '''
-    Citations:
-    Harris Corner and Edge Detector(Isaac Berrios): https://medium.com/@itberrios6/harris-corner-and-edge-detector-4169312aa2f8
+    source: https://medium.com/@itberrios6/harris-corner-and-edge-detector-4169312aa2f8
 '''
+
 
 def derivative_filters():
     """ Create derivative filters for x and y direction
@@ -13,13 +13,8 @@ def derivative_filters():
         fx: derivative filter in x direction
         fy: derivative filter in y direction
     """
-    # sobel kernels
-    fx = np.array([
-        [1, 0, -1],
-        [2, 0, -2],
-        [1, 0, -1]])
-
-    fy = fx.T
+    fx = np.array([[0.5, 0, -0.5]])  # 1D derivative filter. why *0.5?
+    fy = fx.transpose()
     return fx, fy
 
 
@@ -36,10 +31,8 @@ def gauss_2d(sigma, fsize):
     x = np.arange(-m / 2 + 0.5, m / 2)
     y = np.arange(-n / 2 + 0.5, n / 2)
     xx, yy = np.meshgrid(x, y, sparse=True)
-
-    # Calculate the 2D Gaussian filter
     g = np.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
-    return g / np.sum(g)  # normalization
+    return g / np.sum(g)
 
 
 def compute_hessian(img, gauss, fx, fy):

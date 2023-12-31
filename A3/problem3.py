@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+'''
+    source: https://www.kaggle.com/code/ravisane1/ransac-algorithm-from-scratch
+'''
 
 def load_pts_features(path):
     """ Load interest points and SIFT features.
@@ -48,9 +51,10 @@ def pickup_samples(pts1, pts2):
     """
     # Determine the minimum number of point pairs needed
     N_min = min_num_pairs()
+    row = np.min((pts1.shape[0], pts2.shape[0]))
 
     # Randomly select N_min corresponding point pairs
-    index = np.random.choice(len(pts1), size=N_min, replace=False)
+    index = np.random.choice(row, size=N_min, replace=False)
 
     # Extract selected points from pts1 and pts2
     pts1_sub = pts1[index]
@@ -71,7 +75,7 @@ def compute_homography(pts1, pts2):
     """
     assert len(pts1) == len(pts2)
 
-    # Construct the homogeneous linear equation system
+    # the homogeneous linear equation system
     A = []
     for i in range(pts1.shape[0]):
         A += [[0, 0, 0, pts1[i, 0], pts1[i, 1], 1, -pts1[i, 0] * pts2[i, 1], -pts1[i, 1] * pts2[i, 1], -pts2[i, 1]],
@@ -96,10 +100,10 @@ def transform_pts(pts, H):
     Returns:
         transformed points, array (N, 2)
     """
-    # Homogeneous coordinates (add a column of ones)
+    # Tranform to Homogeneous coordinates (add a column of ones)
     p = np.hstack((pts, np.ones((pts.shape[0], 1))))
 
-    # Transform the points
+    # Mapping the points through Homography
     pointsT = H @ p.T
 
     # Normalization
@@ -120,7 +124,7 @@ def count_inliers(H, pts1, pts2, threshold=5):
     Returns:
         number of inliers
     """
-    # Transformation
+    # Transformation through homography
     pts1_H = transform_pts(pts1, H)
 
     # Calculate the L2 distance
@@ -159,10 +163,10 @@ def ransac(pts1, pts2):
         best homography observed during RANSAC, array (3, 3)
     """
     # init
+    h = len(pts1)
     best_H = np.empty((3, 3))
     max_inliers = 0
     max_iters = ransac_iters()
-    assert max_iters <= len(pts1)
 
     # RANSAC algorithm
     for i in range(max_iters):
@@ -170,9 +174,13 @@ def ransac(pts1, pts2):
         s1, s2 = pickup_samples(pts1, pts2)  # random select 4 pairs
         H = compute_homography(s1, s2)
         n_inliers = count_inliers(H, pts1, pts2)
+
         if n_inliers > max_inliers:
             best_H = H
             max_inliers = n_inliers
+
+        if n_inliers >= h:
+            break
 
     return best_H
 
@@ -194,19 +202,17 @@ def find_matches(feats1, feats2, rT=0.8):
     idx2 = []
 
     for i, feat1 in enumerate(feats1):
-        # Calculate L2 distances between feat1 and all feats2
+        # Calculate distance and find the indices of the two closest features
         dist = np.linalg.norm(feat1 - feats2, axis=1)
+        fmin_idx = np.argsort(dist)[:2]
 
-        # Find the indices of the two closest features
-        closest_indices = np.argsort(dist)[:2]
+        # Calculate the ratio between 1st minimum and 2nd minimum distance
+        d_star = dist[fmin_idx[0]] / dist[fmin_idx[1]]
 
-        # Calculate the ratio of distances
-        ratio = dist[closest_indices[0]] / dist[closest_indices[1]]
-
-        # Check if the ratio is below the threshold
-        if ratio < rT:
+        # Filtering corresponding pairs through threshold
+        if d_star < rT:
             idx1.append(i)
-            idx2.append(closest_indices[0])
+            idx2.append(fmin_idx[0])
 
     return idx1, idx2
 
@@ -221,19 +227,16 @@ def final_homography(pts1, pts2, feats1, feats2):
        feats2: SIFT descriptors of interest points in img1, array (M, 128)
     
     Returns:
-        ransac_return: refitted homography matrix from ransac fucation, array (3, 3)
+        ransac_return: refitted homography matrix from ransac function, array (3, 3)
         idxs1: list of matched points in image 1
         idxs2: list of matched points in image 2
     """
+    # Find matches through SIFT descriptor
+    idx1, idx2 = find_matches(feats1, feats2)
+    match_pts1 = pts1[idx1]
+    match_pts2 = pts2[idx2]
 
-    # Find initial matches using SIFT descriptors
-    idxs1, idxs2 = find_matches(feats1, feats2)
+    # RANSAC main body
+    ransac_return = ransac(match_pts1, match_pts2)
 
-    # Extract corresponding points from the initial matches
-    initial_pts1 = pts1[idxs1]
-    initial_pts2 = pts2[idxs2]
-
-    # Run RANSAC to get the best homography
-    ransac_return = ransac(initial_pts1, initial_pts2)
-
-    return ransac_return, idxs1, idxs2
+    return ransac_return, idx1, idx2
