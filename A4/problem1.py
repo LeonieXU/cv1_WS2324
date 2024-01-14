@@ -1,6 +1,9 @@
 import numpy as np
 from numpy.linalg import norm
 
+'''
+source: https://github.com/davechristian/Simple-SSD-Stereo/blob/main/stereomatch_SSD.py
+'''
 
 def cost_ssd(patch_l, patch_r):
     """Compute the Sum of Squared Pixel Differences (SSD):
@@ -12,14 +15,12 @@ def cost_ssd(patch_l, patch_r):
     Returns:
         cost_ssd: the calcuated SSD cost as a floating point value
     """
-    #
-    # You code here
-    #
+    return np.sum((patch_l - patch_r) ** 2)
 
 
 def cost_nc(patch_l, patch_r):
     """Compute the normalized correlation cost (NC):
-    
+
     Args:
         patch_l: input patch 1 as (m, m) numpy array
         patch_r: input patch 2 as (m, m) numpy array
@@ -27,9 +28,17 @@ def cost_nc(patch_l, patch_r):
     Returns:
         cost_nc: the calcuated NC cost as a floating point value
     """
-    #
-    # You code here
-    #
+    # Calculate the mean intensity of patch_l and patch_r
+    wl_hat = np.mean(patch_l)
+    wr_hat = np.mean(patch_r)
+
+    # Compute the cross-covariance between patch_l and patch_r
+    cross_cov = np.sum((patch_l - wl_hat) * (patch_r - wr_hat))
+
+    # Calculate the L2 norm
+    norm_l = norm(patch_l - wl_hat)
+    norm_r = norm(patch_r - wr_hat)
+    return cross_cov / (norm_l * norm_r)
 
 
 def cost_function(patch_l, patch_r, alpha):
@@ -42,9 +51,10 @@ def cost_function(patch_l, patch_r, alpha):
     Returns:
         cost_val: the calculated cost value as a floating point value
     """
-    #
-    # You code here
-    #
+    m = patch_r.shape[0]
+    cost1 = cost_ssd(patch_l, patch_r) / (m**2)
+    cost2 = alpha * cost_nc(patch_l, patch_r)
+    return cost1 + cost2
 
 
 def pad_image(input_img, window_size, padding_mode='symmetric'):
@@ -59,9 +69,22 @@ def pad_image(input_img, window_size, padding_mode='symmetric'):
     Returns:
         padded_img: padded image as a numpy array of the same type as input_img
     """
-    #
-    # You code here
-    #
+    assert window_size % 2 == 1, "Wrong Window Size!"  # ensure that the window size is odd
+
+    # Calculate the padding width
+    pad_width = window_size // 2
+
+    # Apply padding according to the selected mode
+    if padding_mode == 'symmetric':
+        padded_img = np.pad(input_img, pad_width, 'symmetric')
+    elif padding_mode == 'reflect':
+        padded_img = np.pad(input_img, pad_width, 'reflect')
+    elif padding_mode == 'constant':
+        padded_img = np.pad(input_img, pad_width, constant_values=0)
+    else:
+        raise ValueError("Invalid padding mode.")
+
+    return padded_img
 
 
 def compute_disparity(padded_img_l, padded_img_r, max_disp, window_size, alpha):
@@ -76,9 +99,40 @@ def compute_disparity(padded_img_l, padded_img_r, max_disp, window_size, alpha):
     Returns:
         disparity: numpy array (H,W) of the same type as image
     """
-    #
-    # You code here
-    #
+    assert padded_img_l.shape == padded_img_r.shape
+
+    # Initialize the disparity map
+    h, w = padded_img_l.shape
+    disparity = np.zeros((h-window_size+1, w-window_size+1), dtype=padded_img_l.dtype)
+
+    # Shifting window
+    for y in range(h-window_size+1):  # rows
+        for x in range(w-window_size+1):  # columns
+            best_disp = 0
+            prev_cost = 0
+            # print("window", (x, y))
+
+            patch_l = padded_img_l[y:y+window_size, x:x+window_size]
+
+            for disp in range(max_disp):
+                if x-disp >= 0 and (x+window_size)-disp < w:
+                    # Extract the corresponding window from the right image
+                    patch_r = padded_img_r[y:y+window_size, x-disp:(x+window_size)-disp]
+
+                    # Compute the cost
+                    cost = cost_function(patch_l, patch_r, alpha)
+
+                    # Find the minimum cost and best disparity
+                    if cost < prev_cost:
+                        prev_cost = cost
+                        best_disp = disp
+                else:
+                    break
+
+            # Assign the best disparity to the disparity map
+            disparity[y, x] = best_disp
+
+    return disparity
 
 
 def compute_aepe(disparity_gt, disparity_res):
@@ -91,9 +145,11 @@ def compute_aepe(disparity_gt, disparity_res):
     Returns:
         aepe: the average end-point error as a floating point value
     """
-    #
-    # You code here
-    #
+    assert disparity_gt.shape == disparity_res.shape, print(disparity_gt.shape, disparity_res.shape)
+    h, w = disparity_res.shape
+    N = h * w
+
+    return np.sum(norm(disparity_gt - disparity_res)) / N
 
 
 def optimal_alpha():
@@ -104,7 +160,8 @@ def optimal_alpha():
     #
     # Once you find the best alpha, you have to fix it
     #
-    alpha = np.random.choice([-0.001, -0.01, -0.1, 0.1, 1, 10])
+    # alpha = np.random.choice([-0.001, -0.01, -0.1, 0.1, 1, 10])
+    alpha = -0.1
     return alpha
 
 
@@ -132,4 +189,4 @@ def window_based_disparity_matching():
         
     Example or reponse: (1,1,1)
     """
-    return
+    return (2, 3, 1)
