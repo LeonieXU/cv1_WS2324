@@ -17,12 +17,13 @@ def disparity_read(filename):
     return disparity
 
 
-def show_disparity(disparity_gt, disparity_res):
+def show_disparity(disparity_gt, disparity_res, alpha, window_size, padding_mode):
     fig, axs = plt.subplots(nrows=2, sharex=True)
     axs[0].set_title('disparity_gt')
     axs[0].imshow(disparity_gt, vmin=0, vmax=20)
     axs[1].set_title('disparity_res')
     axs[1].imshow(disparity_res, vmin=0, vmax=20)
+    plt.savefig(f'disparity_{alpha}_{window_size}_{padding_mode}.png')
     plt.show()
 
 

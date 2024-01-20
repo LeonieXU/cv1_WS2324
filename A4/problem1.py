@@ -5,6 +5,7 @@ from numpy.linalg import norm
 source: https://github.com/davechristian/Simple-SSD-Stereo/blob/main/stereomatch_SSD.py
 '''
 
+
 def cost_ssd(patch_l, patch_r):
     """Compute the Sum of Squared Pixel Differences (SSD):
     
@@ -189,4 +190,4 @@ def window_based_disparity_matching():
         
     Example or reponse: (1,1,1)
     """
-    return (2, 3, 1)
+    return (2, 2, 1)

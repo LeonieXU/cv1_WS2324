@@ -17,8 +17,11 @@ def compute_derivatives(img1, img2):
     
     Hint: the provided conv2d function might be useful
     """
+    # Kernel
     sobel_X = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]]) / 8
     sobel_Y = sobel_X.T
+
+    # Compute derivatives based on sobel kernel
     Ix = conv2d(img1, sobel_X)
     Iy = conv2d(img1, sobel_Y)
     It = img1 - img2
@@ -37,10 +40,7 @@ def compute_motion(Ix, Iy, It, patch_size=15):
     
     Hint: the provided conv2d function might be useful
     """
-    # h, w = Ix.shape
-    # u = np.zeros((h,w))
-    # v = np.zeros((h,w))
-
+    # Compute local products of image derivatives
     kernel = np.ones((patch_size, patch_size))
     Ix_window = conv2d(Ix ** 2, kernel)
     Iy_window = conv2d(Iy ** 2, kernel)
@@ -48,7 +48,10 @@ def compute_motion(Ix, Iy, It, patch_size=15):
     Ixt_window = conv2d(Ix * It, kernel)
     Iyt_window = conv2d(Iy * It, kernel)
 
+    # Compute the determinant
     det = Ix_window * Iy_window - Ixy_window ** 2
+
+    # Compute optical flow (based on inverse matrix of 2nd order)
     u = (Iy_window * Ixt_window - Ixy_window * Iyt_window) / det
     v = (Ixy_window * Ixt_window - Ix_window * Iyt_window) / det
     return u, v
@@ -64,24 +67,18 @@ def warp(img, u, v):
     Returns:
         im_warp: warped image as (H, W) np.array
     """
-    # Create a grid of coordinates
+    # Create grid for interpolation
     h, w = img.shape
-    y, x = np.mgrid[0:h, 0:w]
+    y, x = np.meshgrid(np.arange(w), np.arange(h))
 
     # Warp the coordinates based on the optical flow
-    warped_x = x + u
-    warped_y = y + v
-
-    # Flatten the arrays for griddata
-    flat_x = x.flatten()
-    flat_y = y.flatten()
-    flat_warped_x = warped_x.flatten()
-    flat_warped_y = warped_y.flatten()
+    x_warp = x + u
+    y_warp = y + v
 
     # Interpolate the values at the warped coordinates
-    warped_image = interpolate.griddata((flat_x, flat_y), img.flatten(), (flat_warped_x, flat_warped_y), method='linear')
+    warped_image = interpolate.griddata((x.flatten(), y.flatten()),
+                                        img.flatten(),
+                                        (x_warp.flatten(), y_warp.flatten()),
+                                        method='linear')
 
-    # Reshape the interpolated values back to the original image shape
-    warped_image = warped_image.reshape(h, w)
-
-    return warped_image
+    return warped_image.reshape(h, w)

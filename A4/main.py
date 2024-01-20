@@ -1,9 +1,12 @@
+import matplotlib.pyplot as plt
+
 from utils import *
 
 #
 # Problem 1
 #
 from problem1 import *
+
 
 def problem1():
     """Example code implementing the steps in Problem 1"""
@@ -24,20 +27,22 @@ def problem1():
    
     # Padding the images
     padded_img_l = pad_image(im_left, window_size, padding_mode='symmetric')
-    padded_img_r = pad_image(im_right, window_size, padding_mode='symmetric') 
+    padded_img_r = pad_image(im_right, window_size, padding_mode='symmetric')
+    padding_mode = 'symmetric'
 
     # Compute disparity
     disparity_res = compute_disparity(padded_img_l, padded_img_r, max_disp, window_size, alpha)
     aepe = compute_aepe(disparity_gt, disparity_res)
     print("AEPE: {:4.3f}".format(aepe))
     
-    show_disparity(disparity_gt, disparity_res)
+    show_disparity(disparity_gt, disparity_res, alpha, window_size, padding_mode)
 
 
 #
 # Problem 2
 #
 from problem2 import *
+
 
 def problem2():
     # Loading the image and scaling them to [0, 1]
@@ -60,5 +65,5 @@ def problem2():
 
 
 if __name__ == "__main__":
-    problem1()
+    # problem1()
     problem2()
