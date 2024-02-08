@@ -18,12 +18,16 @@ def evaluation(x, y, nn):
             pred[0, i] = 0
 
     print("Accuracy: " + str(np.sum((pred == y) / float(m))))
-    return np.array(pred[0], dtype=np.int), (pred == y)[0], np.sum((pred == y) / float(m)) * 100
+    return np.array(pred[0], dtype=np.int32), (pred == y)[0], np.sum((pred == y) / float(m)) * 100
 
 #
 # Problem 1
 #
+
+
 import problem1 as p1
+
+
 def problem1():
 
     # load data
@@ -67,7 +71,6 @@ def problem1():
             "Training set, number of images: %d\n Accuracy: %.2f%%, misclassified examples are represented in a red-yellow colormap."
             % (X_train.shape[1], accuracy),
             fontsize=12)
-
 
     # evaluate performance on the validation set
     plt.figure(figsize=(8, 8))
@@ -188,4 +191,4 @@ def problem2():
 
 if __name__ == "__main__":
     problem1()
-    problem2()
+    # problem2()

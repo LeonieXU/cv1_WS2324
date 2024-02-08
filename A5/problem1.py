@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Network:
     """
     Constructs a neural network according to a list detailing the network structure.
@@ -15,15 +16,14 @@ class Network:
         # state dicts, use integer layer id as keys
         # the range is 0,...,num_layers for x and
         # 1,...,num_layers for all other dicts
-        self.w = dict() # weights
-        self.b = dict() # biases
-        self.z = dict() # outputs of linear layers
-        self.x = dict() # outputs of activation layers
-        self.dw = dict() # error derivatives w.r.t. w
-        self.db = dict() # error derivatives w.r.t. b
+        self.w = dict()  # weights
+        self.b = dict()  # biases
+        self.z = dict()  # outputs of linear layers
+        self.x = dict()  # outputs of activation layers
+        self.dw = dict()  # error derivatives w.r.t. w
+        self.db = dict()  # error derivatives w.r.t. b
 
         self.init_wb(network_structure)
-
 
     def init_wb(self, network_structure):
         """ Initialize all parameters w[i] and b[i] for i = 1,..., num_layers of the neural network.
@@ -36,10 +36,10 @@ class Network:
         Initialize weight matrices randomly from a normal distribution with variance 1 / n_(i-1).
         Initialize biases to 0.
         """
-        #
-        # You code here
-        #
-
+        sizes = network_structure
+        for i in range(1, self.num_layers+1):  # begin with second parameter
+            self.w[i] = np.random.normal(loc=0, scale=np.sqrt(1 / sizes[i-1]), size=(sizes[i], sizes[i-1]))
+            self.b[i] = np.zeros((sizes[i], 1))
 
     def sigmoid(self, z):
         """ Sigmoid function.
@@ -50,10 +50,7 @@ class Network:
         Returns:
             x_out: (n_i, b) numpy array, output of the sigmoid function
         """
-        #
-        # You code here
-        #
-
+        return 1.0 / (1.0 + np.exp(-z))
 
     def sigmoid_backward(self, dx_out, z):
         """ Backpropagation for the sigmoid function.
@@ -67,10 +64,9 @@ class Network:
             dz_in: (n_i, b) numpy array, partial derivatives dE/dz_i of the error with respect to
                 the output of the i-th linear layer
         """
-        #
-        # You code here
-        #
-
+        s = self.sigmoid(z)
+        dz_in = dx_out * s * (1 - s)
+        return dz_in
 
     def relu(self, z):
         """ ReLU function.
@@ -81,9 +77,7 @@ class Network:
         Returns:
             x_out: (n_i, b) numpy array, output of the ReLU function
         """
-        #
-        # You code here
-        #
+        return np.maximum(0, z)
 
     def relu_backward(self, dx_out, z):
         """ Backpropagation for the ReLU function.
@@ -97,10 +91,8 @@ class Network:
             dz_in: (n_i, b) numpy array, partial derivatives dE/dz_i of the error with respect to
                 the output of the i-th linear layer
         """
-        #
-        # You code here
-        #
-
+        # z <= 0, set dz_in to 0
+        return np.where(z <= 0, 0, dx_out)
 
     def activation_func(self, func, z):
         """ Select and perform forward pass through activation function.
@@ -116,7 +108,6 @@ class Network:
             return self.sigmoid(z)
         elif func == "relu":
             return self.relu(z)
-
 
     def activation_func_backward(self, func, dx_out, z):
         """ Select and perform backward pass through activation function.
@@ -136,7 +127,6 @@ class Network:
         elif func == "relu":
             return self.relu_backward(dx_out, z)
 
-
     def layer_forward(self, x_in, func, i):
         """ Forward propagation through the i-th network layer.
         Uses the states of w[i] and b[i].
@@ -151,10 +141,14 @@ class Network:
         Returns:
             x_out: (n_i, b) numpy array, output of the i-th linear layer
         """
-        #
-        # You code here
-        #
+        # compute layer output
+        z_out = np.dot(self.w[i], x_in) + self.b[i]
+        x_out = self.activation_func(func, z_out)  # active function
 
+        # update z[i] and x[i]
+        self.z[i] = z_out
+        self.x[i] = x_out
+        return x_out
 
     def forward(self, x):
         """ Neural network forward propagation. Use ReLU activations in all but the last layer.
@@ -168,10 +162,15 @@ class Network:
         Returns:
             predictions: (1, b) numpy array, the network's predictions.
         """
-        #
-        # You code here
-        #
+        # updates the state of x[0]
+        self.x[0] = x
 
+        # forward update all layers
+        for i in range(1, self.num_layers):
+            x = self.layer_forward(x, "relu", i)
+
+        predictions = self.layer_forward(x, "sigmoid", self.num_layers)
+        return predictions
 
     def layer_backward(self, dx_out, func, i):
         """ Backward propagation through the i-th network layer.
@@ -189,10 +188,17 @@ class Network:
             dx_in: (n_(i-1), b) numpy array, partial derivatives dE/dx_(i-1) of error
                 with respect to the input of layer i
         """
-        #
-        # You code here
-        #
+        dz_in = self.activation_func_backward(func, dx_out, self.z[i])
+        dw_i = np.dot(dz_in, self.x[i - 1].T)
+        db_i = np.sum(dz_in, axis=1, keepdims=True)
 
+        # update dw[i] and db[i]
+        self.dw[i] = dw_i
+        self.db[i] = db_i
+
+        # pass dx_in to the previous layer
+        dx_in = np.dot(self.w[i].T, dz_in)
+        return dx_in
 
     def back_propagation(self, y):
         """ Neural network backward propagation. Use ReLU activations in all but the last layer.
@@ -217,10 +223,9 @@ class Network:
         # iteratively perform backward propagation through the network layers,
         # update states of dw and db for the i-th layer
         for i in reversed(range(1, self.num_layers)):
-            dx_in =  self.layer_backward(dx_in, "relu", i)
+            dx_in = self.layer_backward(dx_in, "relu", i)
 
         return dx_in
-
 
     def update_wb(self, lr):
         """ Update the states of w[i] and b[i] for all layers i based on gradient information
@@ -229,10 +234,9 @@ class Network:
         Args:
             lr: learning rate
         """
-        #
-        # You code here
-        #
-
+        for i in range(1, self.num_layers + 1):
+            self.w[i] -= lr * self.dw[i]
+            self.b[i] -= lr * self.db[i]
 
     def shuffle_data(self, X, Y):
         """ Shuffles the data arrays X and Y randomly. You can use
@@ -247,10 +251,14 @@ class Network:
             X_shuffled: (n_0, B) numpy array, shuffled version of X
             Y_shuffled: (1, B) numpy array, shuffled version of Y
         """
-        #
-        # You code here
-        #
+        # random index
+        index_shuffled = np.random.permutation(np.arange(Y.shape[1]))
 
+        # shuffle the origin data and labels
+        X_shuffled = X[:, index_shuffled]
+        Y_shuffled = Y[:, index_shuffled]
+
+        return X_shuffled, Y_shuffled
 
     def train(self, X, Y, lr, batch_size, num_epochs):
         """ Trains the neural network with stochastic gradient descent by calling
@@ -271,8 +279,8 @@ class Network:
             X, Y = self.shuffle_data(X, Y)
             for i in range(it_per_epoch):
                 # extract mini batches
-                x = X[:, i * batch_size : (i+1) * batch_size]
-                y = Y[:, i * batch_size : (i+1) * batch_size]
+                x = X[:, i * batch_size: (i+1) * batch_size]
+                y = Y[:, i * batch_size: (i+1) * batch_size]
                 # perform a forward pass, update states of x and z
                 _ = self.forward(x)
                 # update states of dw and db by performing a backward pass
