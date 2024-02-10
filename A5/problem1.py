@@ -277,6 +277,7 @@ class Network:
         it_per_epoch = num_examples // batch_size
         for _ in range(num_epochs):
             X, Y = self.shuffle_data(X, Y)
+            print(X.shape)
             for i in range(it_per_epoch):
                 # extract mini batches
                 x = X[:, i * batch_size: (i+1) * batch_size]

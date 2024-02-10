@@ -182,7 +182,7 @@ def problem2():
             plt.yticks([])
             plt.suptitle(
                 "Test set, number of images: %d\n Accuracy: %.2f%%, misclassified examples are represented in a red-yellow colormap."
-                % (X_test.shape[1], accuracy),
+                % (X_test.shape[1], accuracy*100),
                 fontsize=12)
         plt.show()
          
