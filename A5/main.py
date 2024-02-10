@@ -185,7 +185,7 @@ def problem2():
                 % (X_test.shape[1], accuracy*100),
                 fontsize=12)
         plt.show()
-         
+    p2.analysis()
 
 
 

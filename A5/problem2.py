@@ -75,4 +75,13 @@ def analysis():
     Compare the performance of the two networks in Problem 1 and Problem 2 and
     briefly summarize which one performs better and why.
     """
-    print("CNN Network performs better:  we can get NN with accuracy 80%, while CNN with final accuracy 100%. ")
+    alys = """
+    CNN Network performs better: obviously we can get accuracy 80% (in train set) by NN with 20 epochs, while CNN 
+    already get accuracy 100% from 6th epoch.
+    
+    we thought because in convolutional layers each kernel uses the same weights when prosessing inputs, this will 
+    reduce the number of parameters. Otherwise because the sparse connectivity in convolutional layers (the 
+    convolutional kernels only connected to local regions of the input, will not be influenced by other regions) 
+    further reducing computational costs.
+    """
+    print(alys)
